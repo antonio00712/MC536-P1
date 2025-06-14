@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS esgoto (
 
 DROP TABLE IF EXISTS infraestrutura CASCADE;
 CREATE TABLE IF NOT EXISTS infraestrutura (
-    dependencias_id SERIAL PRIMARY KEY,
+    infraestrutura_id SERIAL PRIMARY KEY,
     NU_ANO_CENSO INTEGER,
     CO_ENTIDADE INTEGER,
     FOREIGN KEY(CO_ENTIDADE) REFERENCES escolas(CO_ENTIDADE),
@@ -121,7 +121,6 @@ CREATE TABLE IF NOT EXISTS rendimento_enem (
 -- usando comando \copy para importar os dados do arquivo CSV
 -- nome regiao = NO_REGIAO
 -- sigla = SG_UF
-
 \copy regiao_escolar(NO_MUNICIPIO, SG_UF) from '/tmp/data/regiao_escolar_parsed.csv' DELIMITER ',' CSV HEADER;
 \copy escolas(CO_ENTIDADE, NO_ENTIDADE, TP_DEPENDENCIA, TP_LOCALIZACAO, regiao_id) from '/tmp/data/escolas_parsed.csv' DELIMITER ',' CSV HEADER;
 \copy agua(NU_ANO_CENSO, CO_ENTIDADE,IN_AGUA_REDE_PUBLICA, IN_AGUA_POCO_ARTESIANO, IN_AGUA_CACIMBA, IN_AGUA_FONTE_RIO, IN_AGUA_INEXISTENTE) from '/tmp/data/agua_parsed.csv' DELIMITER ',' CSV HEADER;
@@ -192,7 +191,7 @@ JOIN agua a ON a.co_entidade = e.co_entidade
 JOIN energia en ON en.co_entidade = e.co_entidade
 JOIN esgoto es ON es.co_entidade = e.co_entidade
 JOIN internet i ON i.co_entidade = e.co_entidade
-JOIN dependencias d ON d.co_entidade = e.co_entidade
+JOIN infraestrutura d ON d.co_entidade = e.co_entidade
 WHERE 
   a.in_agua_rede_publica = TRUE AND
   en.in_energia_rede_publica = TRUE AND
