@@ -1,6 +1,10 @@
 # Projeto MC536
 > Projeto 1 da disciplina de Banco de Dados MC536 da Unicamp
 
+## 📕 Modelo Conceitual
+
+<img src="modelo_conceitual_p1.jpg" alt="Modelo Conceitual">
+
 ## 💻 Tutorial para uso 
 
 1. Crie uma pasta vazia no diretório /tmp chamada data/;
