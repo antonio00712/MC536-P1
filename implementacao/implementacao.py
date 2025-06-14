@@ -4,7 +4,7 @@ import os
 def criar_esquema(conn):
     print("Criando esquema no banco de dados...")
     with conn.cursor() as cur:
-        with open('path_to/import.sql', 'r') as f:
+        with open('/home/parcv/Documentos/comput/faculdade/mc536/banco_de_dados_Escolas/data_sets/code/import.sql', 'r') as f:
             linhas = f.readlines()
 
         # Remove linhas com \copy (não são SQL válidas para psycopg2)
@@ -23,22 +23,14 @@ def popular_banco(conn):
         "agua": "/tmp/data/agua_parsed.csv",
         "energia": "/tmp/data/energia_parsed.csv",
         "esgoto": "/tmp/data/esgoto_parsed.csv",
-        "dependencias": "/tmp/data/dependencias_parsed.csv",
+        "infraestrutura": "/tmp/data/dependencias_parsed.csv",
         "internet": "/tmp/data/internet_parsed.csv",
-        "corpo_docente": "/tmp/data/corpo_docente_parsed.csv",
+        "funcionarios": "/tmp/data/corpo_docente_parsed.csv",
         "rendimento_enem": "/tmp/data/rendimento_enem.csv",
-        "rendimento": "/tmp/data/serie_parsed.csv",
+        "rendimento_escolar": "/tmp/data/serie_parsed.csv",
     }
 
     with conn.cursor() as cur:
-        # Inserir anos de 2005 a 2023 com proteção contra duplicatas
-        print("🗓️ Inserindo anos diretamente na tabela 'ano'...")
-        for ano in range(2005, 2024):
-            cur.execute(
-                "INSERT INTO ano (NU_ANO_CENSO) VALUES (%s) ON CONFLICT DO NOTHING;",
-                (ano,)
-            )
-        print("✅ Anos inseridos com sucesso.")
         # Inserir dados de cada tabela diretamente do CSV
         cur.copy_expert(
             "COPY regiao_escolar (NO_MUNICIPIO, SG_UF) FROM STDIN WITH CSV HEADER DELIMITER ','",
@@ -66,25 +58,25 @@ def popular_banco(conn):
         )
         print("✅ Tabela 'esgoto' populada com sucesso.")
         cur.copy_expert(
-            "COPY dependencias(NU_ANO_CENSO, CO_ENTIDADE, IN_AREA_VERDE, IN_BANHEIRO, IN_BIBLIOTECA, IN_LABORATORIO_INFORMATICA) FROM STDIN WITH CSV HEADER DELIMITER ','",
-            open(tabelas_arquivos["dependencias"], 'r')
+            "COPY infraestrutura(NU_ANO_CENSO, CO_ENTIDADE, IN_AREA_VERDE, IN_BANHEIRO, IN_BIBLIOTECA, IN_LABORATORIO_INFORMATICA) FROM STDIN WITH CSV HEADER DELIMITER ','",
+            open(tabelas_arquivos["infraestrutura"], 'r')
         )
-        print("✅ Tabela 'dependencias' populada com sucesso.")
+        print("✅ Tabela 'infraestrutura' populada com sucesso.")
         cur.copy_expert(
             "COPY internet(NU_ANO_CENSO, CO_ENTIDADE, IN_INTERNET, IN_INTERNET_ALUNOS, IN_INTERNET_ADMINISTRATIVO, IN_INTERNET_APRENDIZAGEM, TP_REDE_LOCAL) FROM STDIN WITH CSV HEADER DELIMITER ','",
             open(tabelas_arquivos["internet"], 'r')
         )
         print("✅ Tabela 'internet' populada com sucesso.")
         cur.copy_expert(
-            "COPY corpo_docente(NU_ANO_CENSO, CO_ENTIDADE, QT_PROF_SAUDE, QT_PROF_PSICOLOGO, QT_PROF_ASSIST_SOCIAL) FROM STDIN WITH CSV HEADER DELIMITER ','",
-            open(tabelas_arquivos["corpo_docente"], 'r')
+            "COPY funcionarios(NU_ANO_CENSO, CO_ENTIDADE, QT_PROF_SAUDE, QT_PROF_PSICOLOGO, QT_PROF_ASSIST_SOCIAL) FROM STDIN WITH CSV HEADER DELIMITER ','",
+            open(tabelas_arquivos["funcionarios"], 'r')
         )
-        print("✅ Tabela 'corpo_docente' populada com sucesso.")
+        print("✅ Tabela 'funcionarios' populada com sucesso.")
         cur.copy_expert(
-            "COPY rendimento(NU_ANO_CENSO, CO_ENTIDADE, FUNDAMENTAL, ENSINO_MEDIO) FROM STDIN WITH CSV HEADER DELIMITER ','",
-            open(tabelas_arquivos["rendimento"], 'r')
+            "COPY rendimento_escolar(NU_ANO_CENSO, CO_ENTIDADE, FUNDAMENTAL, ENSINO_MEDIO) FROM STDIN WITH CSV HEADER DELIMITER ','",
+            open(tabelas_arquivos["rendimento_escolar"], 'r')
         )
-        print("✅ Tabela 'rendimento' populada com sucesso.")
+        print("✅ Tabela 'rendimento_escolar' populada com sucesso.")
         cur.copy_expert(
             "COPY rendimento_enem(NU_ANO, CO_ESCOLA_EDUCACENSO, NU_MATRICULAS, NU_PARTICIPANTES, NU_TAXA_PARTICIPACAO, NU_MEDIA_TOT, PORTE_ESCOLA) FROM STDIN WITH CSV HEADER DELIMITER ','",
             open(tabelas_arquivos["rendimento_enem"], 'r')
@@ -208,9 +200,9 @@ def executar_consultas(conn):
 
 def main():
     conn = psycopg2.connect(
-        dbname="nome",
+        dbname="projeto_mc536",
         user="postgres",
-        password="*********",
+        password="unicamp-2324",
         host="localhost",
         port="5432"
     )
@@ -218,7 +210,7 @@ def main():
     try:
         criar_esquema(conn)
         popular_banco(conn)
-        executar_consultas(conn)
+        # executar_consultas(conn)
     finally:
         conn.close()
 
