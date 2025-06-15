@@ -136,78 +136,79 @@ CREATE TABLE IF NOT EXISTS rendimento_enem (
 -- Consultar os dados importados
 
 -- 1. Consultar escolas com mais de uma fonte de água
+SELECT *
+FROM (
 SELECT 
-  e.no_entidade,
-  COUNT(*) FILTER (WHERE a.in_agua_rede_publica) +
-  COUNT(*) FILTER (WHERE a.in_agua_poco_artesiano) +
-  COUNT(*) FILTER (WHERE a.in_agua_cacimba) +
-  COUNT(*) FILTER (WHERE a.in_agua_fonte_rio) AS fontes_agua
+    e.no_entidade,
+    COUNT(*) FILTER (WHERE a.in_agua_rede_publica) +
+    COUNT(*) FILTER (WHERE a.in_agua_poco_artesiano) +
+    COUNT(*) FILTER (WHERE a.in_agua_cacimba) +
+    COUNT(*) FILTER (WHERE a.in_agua_fonte_rio) AS fontes_agua
 FROM escolas e
 JOIN agua a ON e.co_entidade = a.co_entidade
 WHERE 
-  a.in_agua_rede_publica OR 
-  a.in_agua_poco_artesiano OR 
-  a.in_agua_cacimba OR 
-  a.in_agua_fonte_rio
+    a.in_agua_rede_publica OR 
+    a.in_agua_poco_artesiano OR 
+    a.in_agua_cacimba OR 
+    a.in_agua_fonte_rio
 GROUP BY e.no_entidade
-HAVING 
-  COUNT(*) FILTER (WHERE a.in_agua_rede_publica) +
-  COUNT(*) FILTER (WHERE a.in_agua_poco_artesiano) +
-  COUNT(*) FILTER (WHERE a.in_agua_cacimba) +
-  COUNT(*) FILTER (WHERE a.in_agua_fonte_rio) > 1
+) sub
+WHERE fontes_agua > 1
 ORDER BY fontes_agua DESC;
 
 -- 2. Consultar escolas com internet apenas para administrativo    
 SELECT 
-  e.no_entidade,
-  r.sg_uf
+    e.no_entidade,
+    r.sg_uf
 FROM internet i
 JOIN escolas e ON e.co_entidade = i.co_entidade
 JOIN regiao_escolar r ON r.id_regiao = e.regiao_id
 WHERE 
-  i.in_internet_administrativo = TRUE AND
-  (i.in_internet_alunos = FALSE OR i.in_internet_alunos IS NULL);
+    i.in_internet_administrativo = TRUE AND
+    (COALESCE(i.in_internet_alunos, FALSE) = FALSE AND 
+    COALESCE(i.internet_aprendizagem, FALSE) = FALSE);
 
--- 3. melhores rendimentos no enem por escola
+-- 3. Melhores rendimentos no enem por escola
 SELECT 
-  re.co_escola_educacenso,
-  e.no_entidade,
-  re.nu_ano,
-  re.nu_taxa_participacao,
-  re.nu_media_tot
+    re.co_escola_educacenso,
+    e.no_entidade,
+    re.nu_ano,
+    re.nu_taxa_participacao,
+    re.nu_media_tot
 FROM rendimento_enem re
 JOIN escolas e ON e.co_entidade = re.co_escola_educacenso
 WHERE re.nu_media_tot IS NOT NULL
-ORDER BY re.nu_media_tot DESC, re.nu_ano
-LIMIT 20;
+ORDER BY re.nu_media_tot DESC, re.nu_ano;
 
--- 4. escolas com todas as dependências presentes
+-- 4. Escolas com agua, energia, internet, biblioteca, banheiro e laboratorio de informatica presente ao mesmo tempo
 SELECT 
-  e.no_entidade,
-  r.sg_uf
+    e.no_entidade,
+    r.sg_uf
 FROM escolas e
 JOIN regiao_escolar r ON r.id_regiao = e.regiao_id
 JOIN agua a ON a.co_entidade = e.co_entidade
 JOIN energia en ON en.co_entidade = e.co_entidade
 JOIN esgoto es ON es.co_entidade = e.co_entidade
 JOIN internet i ON i.co_entidade = e.co_entidade
-JOIN infraestrutura d ON d.co_entidade = e.co_entidade
+JOIN infraestrutura inf ON inf.co_entidade = e.co_entidade
 WHERE 
-  a.in_agua_rede_publica = TRUE AND
-  en.in_energia_rede_publica = TRUE AND
-  es.in_esgoto_rede_publica = TRUE AND
-  i.in_internet = TRUE AND
-  d.in_biblioteca = TRUE AND
-  d.in_banheiro = TRUE AND
-  d.in_laboratorio_informatica = TRUE;
+a.in_agua_rede_publica = TRUE AND
+en.in_energia_rede_publica = TRUE AND
+es.in_esgoto_rede_publica = TRUE AND
+i.in_internet = TRUE AND
+inf.in_biblioteca = TRUE AND
+inf.in_banheiro = TRUE AND
+inf.in_laboratorio_informatica = TRUE
 
 -- 5. Relação rendimento e dependencia e localização da escola
 SELECT 
-  e.tp_dependencia,
-  COUNT(*) AS qtd_escolas,
-  ROUND(AVG(r.ensino_medio), 2) AS media_ensino_medio
+    e.tp_dependencia,
+COUNT(*) AS qtd_escolas,
+ROUND(AVG(r.ensino_medio), 2) AS media_ensino_medio,
+ROUND(AVG(r.ensino_fundamental), 2) AS media_ensino_fundamental
 FROM rendimento r
 JOIN escolas e ON e.co_entidade = r.co_entidade
-WHERE r.ensino_medio IS NOT NULL
+WHERE 
+r.ensino_medio IS NOT NULL OR r.ensino_fundamental IS NOT NULL
 GROUP BY e.tp_dependencia
-ORDER BY media_ensino_medio DESC;
+ORDER BY media_ensino_medio DESC NULLS LAST;

@@ -128,7 +128,7 @@ def executar_consultas(conn):
             """
         },
         {
-            "descricao": "3. melhores rendimentos no enem por escola",
+            "descricao": "3. Melhores rendimentos no enem por escola",
             "sql": """
                 SELECT 
                     re.co_escola_educacenso,
@@ -170,7 +170,7 @@ def executar_consultas(conn):
             "descricao": "5. Relação rendimento e dependencia e localização da escola",
             "sql": """
                 SELECT 
-                e.tp_dependencia,
+                    e.tp_dependencia,
                 COUNT(*) AS qtd_escolas,
                 ROUND(AVG(r.ensino_medio), 2) AS media_ensino_medio,
                 ROUND(AVG(r.ensino_fundamental), 2) AS media_ensino_fundamental
