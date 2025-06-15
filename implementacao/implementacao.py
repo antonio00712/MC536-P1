@@ -91,6 +91,8 @@ def executar_consultas(conn):
         {
             "descricao": "1. Consultar escolas com mais de uma fonte de água",
             "sql": """
+                SELECT *
+                FROM (
                 SELECT 
                     e.no_entidade,
                     COUNT(*) FILTER (WHERE a.in_agua_rede_publica) +
@@ -105,84 +107,79 @@ def executar_consultas(conn):
                     a.in_agua_cacimba OR 
                     a.in_agua_fonte_rio
                 GROUP BY e.no_entidade
-                HAVING 
-                    COUNT(*) FILTER (WHERE a.in_agua_rede_publica) +
-                    COUNT(*) FILTER (WHERE a.in_agua_poco_artesiano) +
-                    COUNT(*) FILTER (WHERE a.in_agua_cacimba) +
-                    COUNT(*) FILTER (WHERE a.in_agua_fonte_rio) > 1
-                ORDER BY fontes_agua DESC
-                LIMIT 50;
+                ) sub
+                WHERE fontes_agua > 1
+                ORDER BY fontes_agua DESC;
             """
         },
         {
             "descricao": "2. Consultar escolas com internet apenas para administrativo",
             "sql": """
-               SELECT 
-                e.no_entidade,
-                r.sg_uf
-            FROM internet i
-            JOIN escolas e ON e.co_entidade = i.co_entidade
-            JOIN regiao_escolar r ON r.id_regiao = e.regiao_id
-            WHERE 
-                i.in_internet_administrativo = TRUE AND
-                (i.in_internet_alunos = FALSE OR i.in_internet_alunos IS NULL)
-            LIMIT 50;
+                SELECT 
+                    e.no_entidade,
+                    r.sg_uf
+                FROM internet i
+                JOIN escolas e ON e.co_entidade = i.co_entidade
+                JOIN regiao_escolar r ON r.id_regiao = e.regiao_id
+                WHERE 
+                    i.in_internet_administrativo = TRUE AND
+                    (COALESCE(i.in_internet_alunos, FALSE) = FALSE AND 
+                    COALESCE(i.internet_aprendizagem, FALSE) = FALSE);
             """
         },
         {
             "descricao": "3. melhores rendimentos no enem por escola",
             "sql": """
-            SELECT 
-                re.co_escola_educacenso,
-                e.no_entidade,
-                re.nu_ano,
-                re.nu_taxa_participacao,
-                re.nu_media_tot
-            FROM rendimento_enem re
-            JOIN escolas e ON e.co_entidade = re.co_escola_educacenso
-            WHERE re.nu_media_tot IS NOT NULL
-            ORDER BY re.nu_media_tot DESC, re.nu_ano
-            LIMIT 20;
+                SELECT 
+                    re.co_escola_educacenso,
+                    e.no_entidade,
+                    re.nu_ano,
+                    re.nu_taxa_participacao,
+                    re.nu_media_tot
+                FROM rendimento_enem re
+                JOIN escolas e ON e.co_entidade = re.co_escola_educacenso
+                WHERE re.nu_media_tot IS NOT NULL
+                ORDER BY re.nu_media_tot DESC, re.nu_ano;
             """
 
         },
         {
-            "descricao": " 4. escolas com todas as dependências presentes",
+            "descricao": " 4. Escolas com agua, energia, internet, biblioteca, banheiro e laboratorio de informatica presente ao mesmo tempo",
             "sql": """
-            SELECT 
-                e.no_entidade,
-                r.sg_uf
-            FROM escolas e
-            JOIN regiao_escolar r ON r.id_regiao = e.regiao_id
-            JOIN agua a ON a.co_entidade = e.co_entidade
-            JOIN energia en ON en.co_entidade = e.co_entidade
-            JOIN esgoto es ON es.co_entidade = e.co_entidade
-            JOIN internet i ON i.co_entidade = e.co_entidade
-            JOIN dependencias d ON d.co_entidade = e.co_entidade
-            WHERE 
-            a.in_agua_rede_publica = TRUE AND
-            en.in_energia_rede_publica = TRUE AND
-            es.in_esgoto_rede_publica = TRUE AND
-            i.in_internet = TRUE AND
-            d.in_biblioteca = TRUE AND
-            d.in_banheiro = TRUE AND
-            d.in_laboratorio_informatica = TRUE
-            LIMIT 50;
+                SELECT 
+                    e.no_entidade,
+                    r.sg_uf
+                FROM escolas e
+                JOIN regiao_escolar r ON r.id_regiao = e.regiao_id
+                JOIN agua a ON a.co_entidade = e.co_entidade
+                JOIN energia en ON en.co_entidade = e.co_entidade
+                JOIN esgoto es ON es.co_entidade = e.co_entidade
+                JOIN internet i ON i.co_entidade = e.co_entidade
+                JOIN infraestrutura inf ON inf.co_entidade = e.co_entidade
+                WHERE 
+                a.in_agua_rede_publica = TRUE AND
+                en.in_energia_rede_publica = TRUE AND
+                es.in_esgoto_rede_publica = TRUE AND
+                i.in_internet = TRUE AND
+                inf.in_biblioteca = TRUE AND
+                inf.in_banheiro = TRUE AND
+                inf.in_laboratorio_informatica = TRUE
             """
         },
         {
             "descricao": "5. Relação rendimento e dependencia e localização da escola",
             "sql": """
-            SELECT 
+                SELECT 
                 e.tp_dependencia,
-            COUNT(*) AS qtd_escolas,
-            ROUND(AVG(r.ensino_medio), 2) AS media_ensino_medio
-            FROM rendimento r
-            JOIN escolas e ON e.co_entidade = r.co_entidade
-            WHERE r.ensino_medio IS NOT NULL
-            GROUP BY e.tp_dependencia
-            ORDER BY media_ensino_medio DESC
-            LIMIT 50;
+                COUNT(*) AS qtd_escolas,
+                ROUND(AVG(r.ensino_medio), 2) AS media_ensino_medio,
+                ROUND(AVG(r.ensino_fundamental), 2) AS media_ensino_fundamental
+                FROM rendimento r
+                JOIN escolas e ON e.co_entidade = r.co_entidade
+                WHERE 
+                r.ensino_medio IS NOT NULL OR r.ensino_fundamental IS NOT NULL
+                GROUP BY e.tp_dependencia
+                ORDER BY media_ensino_medio DESC NULLS LAST;
             """
         }
     ]
@@ -210,7 +207,7 @@ def main():
     try:
         criar_esquema(conn)
         popular_banco(conn)
-        # executar_consultas(conn)
+        executar_consultas(conn)
     finally:
         conn.close()
 
