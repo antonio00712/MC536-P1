@@ -23,7 +23,7 @@ host="localhost",
 port="5432")
 ```
 5. O arquivo vai então importar, descartar e recriar todas as tabelas do banco de dados e depois vai partir para a população de dados;
-6. Tenha certeza de que todos os arquivos de `dados.zip` do tipo **parsed.csv**  estão em /tmp;
+6. Tenha certeza de que todos os arquivos de `data.zip` do tipo **parsed.csv**  estão em /tmp;
 7. O código vai fazer cada importação separadamente;
 8. Depois ele realiza as consultas.
 
