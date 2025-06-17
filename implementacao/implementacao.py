@@ -4,7 +4,7 @@ import os
 def criar_esquema(conn):
     print("Criando esquema no banco de dados...")
     with conn.cursor() as cur:
-        with open('/home/parcv/Documentos/comput/faculdade/mc536/banco_de_dados_Escolas/data_sets/code/import.sql', 'r') as f:
+        with open('/home/parcv/Documentos/comput/faculdade/mc536/banco_de_dados_Escolas/data_sets/modelo_fisico.sql', 'r') as f:
             linhas = f.readlines()
 
         # Remove linhas com \copy (não são SQL válidas para psycopg2)
