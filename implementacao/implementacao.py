@@ -124,7 +124,7 @@ def executar_consultas(conn):
                 WHERE 
                     i.in_internet_administrativo = TRUE AND
                     (COALESCE(i.in_internet_alunos, FALSE) = FALSE AND 
-                    COALESCE(i.internet_aprendizagem, FALSE) = FALSE);
+                    COALESCE(i.in_internet_aprendizagem, FALSE) = FALSE);
             """
         },
         {
@@ -173,11 +173,11 @@ def executar_consultas(conn):
                     e.tp_dependencia,
                 COUNT(*) AS qtd_escolas,
                 ROUND(AVG(r.ensino_medio), 2) AS media_ensino_medio,
-                ROUND(AVG(r.ensino_fundamental), 2) AS media_ensino_fundamental
-                FROM rendimento r
+                ROUND(AVG(r.fundamental), 2) AS media_ensino_fundamental
+                FROM rendimento_escolar r
                 JOIN escolas e ON e.co_entidade = r.co_entidade
                 WHERE 
-                r.ensino_medio IS NOT NULL OR r.ensino_fundamental IS NOT NULL
+                r.ensino_medio IS NOT NULL OR r.fundamental IS NOT NULL
                 GROUP BY e.tp_dependencia
                 ORDER BY media_ensino_medio DESC NULLS LAST;
             """

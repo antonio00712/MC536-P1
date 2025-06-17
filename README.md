@@ -1,6 +1,9 @@
 # Projeto MC536
 > Projeto 1 da disciplina de Banco de Dados MC536 da Unicamp
 
+## 🌎 Objetivo de Desenvolvimento Sustentável
+Este projeto se relaciona com a ODS 4 – Educação de qualidade, especialmente com as metas 4.4 e 4.c. Ao cruzar dados sobre a infraestrutura das escolas com o desempenho dos alunos no ENEM, buscamos entender como fatores como acesso à internet, biblioteca, saneamento e laboratórios impactam a formação de habilidades importantes para o mercado de trabalho. Isso contribui para pensar políticas que melhorem o ambiente escolar e ajudem no desenvolvimento de competências técnicas e profissionais (meta 4.4), além de apoiar decisões sobre a formação e distribuição de professores qualificados (meta 4.c).
+
 ## 📕 Modelo Conceitual
 
 <img src="modelo_conceitual_p1.jpg" alt="Modelo Conceitual">
