@@ -2,111 +2,93 @@ import psycopg2
 import os
 
 def criar_esquema(conn):
+    """
+    Cria o esquema do banco de dados lendo apenas as definições de tabela
+    do arquivo SQL, parando antes das consultas de análise.
+    """
     print("Criando esquema no banco de dados...")
     with conn.cursor() as cur:
-        with open('/home/parcv/Documentos/comput/faculdade/mc536/banco_de_dados_Escolas/data_sets/code/import.sql', 'r') as f:
-            linhas = f.readlines()
+        # ATENÇÃO: Verifique se este caminho para o arquivo SQL está correto no seu ambiente.
+        caminho_sql = '/path/to/modelo_fisico.sql'
+        
+        with open(caminho_sql, 'r') as f:
+            sql_commands = []
+            for linha in f:
+                # Para de ler o arquivo quando chegar na seção de consultas
+                if linha.strip().startswith('-- Consultar os dados importados'):
+                    break
+                # Ignora os comandos \copy e linhas em branco
+                if not linha.strip().startswith('\\copy') and linha.strip():
+                    sql_commands.append(linha)
+            
+            sql = ''.join(sql_commands)
+            cur.execute(sql)
+            conn.commit()
+            print("✅ Esquema criado com sucesso.")
 
-        # Remove linhas com \copy (não são SQL válidas para psycopg2)
-        comandos_validos = [linha for linha in linhas if not linha.strip().startswith('\\copy')]
-        sql = ''.join(comandos_validos)
-
-        cur.execute(sql)
-        conn.commit()
-        print("✅ Esquema criado com sucesso (comandos \\copy ignorados).")
 
 def popular_banco(conn):
-    """Popula as tabelas com dados CSV e insere anos diretamente na tabela 'ano'."""
+    """Popula as tabelas com dados CSV usando o método copy_expert."""
+    print("\nPopulando o banco de dados...")
+    # ATENÇÃO: Verifique se este caminho para os dados CSV está correto.
+    base_path = '/tmp/data/'
+    
     tabelas_arquivos = {
-        "regiao_escolar": "/tmp/data/regiao_escolar_parsed.csv",
-        "escolas": "/tmp/data/escolas_parsed.csv",
-        "agua": "/tmp/data/agua_parsed.csv",
-        "energia": "/tmp/data/energia_parsed.csv",
-        "esgoto": "/tmp/data/esgoto_parsed.csv",
-        "infraestrutura": "/tmp/data/dependencias_parsed.csv",
-        "internet": "/tmp/data/internet_parsed.csv",
-        "funcionarios": "/tmp/data/corpo_docente_parsed.csv",
-        "rendimento_enem": "/tmp/data/rendimento_enem.csv",
-        "rendimento_escolar": "/tmp/data/serie_parsed.csv",
+        "regiao_escolar": "regiao_escolar_parsed.csv",
+        "escolas": "escolas_parsed.csv",
+        "agua": "agua_parsed.csv",
+        "energia": "energia_parsed.csv",
+        "esgoto": "esgoto_parsed.csv",
+        "infraestrutura": "dependencias_parsed.csv",
+        "internet": "internet_parsed.csv",
+        "funcionarios": "corpo_docente_parsed.csv",
+        "rendimento_enem": "rendimento_enem.csv",
+        "rendimento_escolar": "serie_parsed.csv",
+    }
+    
+    copy_statements = {
+        "regiao_escolar": "COPY regiao_escolar (NO_MUNICIPIO, SG_UF) FROM STDIN WITH CSV HEADER DELIMITER ','",
+        "escolas": "COPY escolas (CO_ENTIDADE, NO_ENTIDADE, TP_DEPENDENCIA, TP_LOCALIZACAO, regiao_id) FROM STDIN WITH CSV HEADER DELIMITER ','",
+        "agua": "COPY agua (NU_ANO_CENSO, CO_ENTIDADE, IN_AGUA_REDE_PUBLICA, IN_AGUA_POCO_ARTESIANO, IN_AGUA_CACIMBA, IN_AGUA_FONTE_RIO, IN_AGUA_INEXISTENTE) FROM STDIN WITH CSV HEADER DELIMITER ','",
+        "energia": "COPY energia(NU_ANO_CENSO,CO_ENTIDADE,IN_ENERGIA_REDE_PUBLICA, IN_ENERGIA_GERADOR_FOSSIL, IN_ENERGIA_RENOVAVEL, IN_ENERGIA_INEXISTENTE) FROM STDIN WITH CSV HEADER DELIMITER ','",
+        "esgoto": "COPY esgoto(NU_ANO_CENSO, CO_ENTIDADE, IN_ESGOTO_REDE_PUBLICA, IN_ESGOTO_FOSSA_SEPTICA, IN_ESGOTO_FOSSA_COMUM, IN_ESGOTO_FOSSA, IN_ESGOTO_INEXISTENTE) FROM STDIN WITH CSV HEADER DELIMITER ','",
+        "infraestrutura": "COPY infraestrutura(NU_ANO_CENSO, CO_ENTIDADE, IN_AREA_VERDE, IN_BANHEIRO, IN_BIBLIOTECA, IN_LABORATORIO_INFORMATICA) FROM STDIN WITH CSV HEADER DELIMITER ','",
+        "internet": "COPY internet(NU_ANO_CENSO, CO_ENTIDADE, IN_INTERNET, IN_INTERNET_ALUNOS, IN_INTERNET_ADMINISTRATIVO, IN_INTERNET_APRENDIZAGEM, TP_REDE_LOCAL) FROM STDIN WITH CSV HEADER DELIMITER ','",
+        "funcionarios": "COPY funcionarios(NU_ANO_CENSO, CO_ENTIDADE, QT_PROF_SAUDE, QT_PROF_PSICOLOGO, QT_PROF_ASSIST_SOCIAL) FROM STDIN WITH CSV HEADER DELIMITER ','",
+        "rendimento_escolar": "COPY rendimento_escolar(NU_ANO_CENSO, CO_ENTIDADE, FUNDAMENTAL, ENSINO_MEDIO) FROM STDIN WITH CSV HEADER DELIMITER ','",
+        "rendimento_enem": "COPY rendimento_enem(NU_ANO, CO_ESCOLA_EDUCACENSO, NU_MATRICULAS, NU_PARTICIPANTES, NU_TAXA_PARTICIPACAO, NU_MEDIA_TOT, PORTE_ESCOLA) FROM STDIN WITH CSV HEADER DELIMITER ','"
     }
 
     with conn.cursor() as cur:
-        # Inserir dados de cada tabela diretamente do CSV
-        cur.copy_expert(
-            "COPY regiao_escolar (NO_MUNICIPIO, SG_UF) FROM STDIN WITH CSV HEADER DELIMITER ','",
-            open(tabelas_arquivos["regiao_escolar"], 'r')
-        )
-        print("✅ Tabela 'regiao_escolar' populada com sucesso.")
-        cur.copy_expert(
-            "COPY escolas (CO_ENTIDADE, NO_ENTIDADE, TP_DEPENDENCIA, TP_LOCALIZACAO, regiao_id) FROM STDIN WITH CSV HEADER DELIMITER ','",
-            open(tabelas_arquivos["escolas"], 'r')
-        )
-        print("✅ Tabela 'escolas' populada com sucesso.")
-        cur.copy_expert(
-            "COPY agua (NU_ANO_CENSO, CO_ENTIDADE,IN_AGUA_REDE_PUBLICA, IN_AGUA_POCO_ARTESIANO, IN_AGUA_CACIMBA, IN_AGUA_FONTE_RIO, IN_AGUA_INEXISTENTE) FROM STDIN WITH CSV HEADER DELIMITER ','",
-            open(tabelas_arquivos["agua"], 'r')
-        )
-        print("✅ Tabela 'agua' populada com sucesso.")
-        cur.copy_expert(
-            "COPY energia(NU_ANO_CENSO,CO_ENTIDADE,IN_ENERGIA_REDE_PUBLICA, IN_ENERGIA_GERADOR_FOSSIL, IN_ENERGIA_RENOVAVEL, IN_ENERGIA_INEXISTENTE) FROM STDIN WITH CSV HEADER DELIMITER ','",
-            open(tabelas_arquivos["energia"], 'r')
-        )
-        print("✅ Tabela 'energia' populada com sucesso.")
-        cur.copy_expert(
-            "COPY esgoto(NU_ANO_CENSO, CO_ENTIDADE, IN_ESGOTO_REDE_PUBLICA, IN_ESGOTO_FOSSA_SEPTICA, IN_ESGOTO_FOSSA_COMUM, IN_ESGOTO_FOSSA, IN_ESGOTO_INEXISTENTE) FROM STDIN WITH CSV HEADER DELIMITER ','",
-            open(tabelas_arquivos["esgoto"], 'r')
-        )
-        print("✅ Tabela 'esgoto' populada com sucesso.")
-        cur.copy_expert(
-            "COPY infraestrutura(NU_ANO_CENSO, CO_ENTIDADE, IN_AREA_VERDE, IN_BANHEIRO, IN_BIBLIOTECA, IN_LABORATORIO_INFORMATICA) FROM STDIN WITH CSV HEADER DELIMITER ','",
-            open(tabelas_arquivos["infraestrutura"], 'r')
-        )
-        print("✅ Tabela 'infraestrutura' populada com sucesso.")
-        cur.copy_expert(
-            "COPY internet(NU_ANO_CENSO, CO_ENTIDADE, IN_INTERNET, IN_INTERNET_ALUNOS, IN_INTERNET_ADMINISTRATIVO, IN_INTERNET_APRENDIZAGEM, TP_REDE_LOCAL) FROM STDIN WITH CSV HEADER DELIMITER ','",
-            open(tabelas_arquivos["internet"], 'r')
-        )
-        print("✅ Tabela 'internet' populada com sucesso.")
-        cur.copy_expert(
-            "COPY funcionarios(NU_ANO_CENSO, CO_ENTIDADE, QT_PROF_SAUDE, QT_PROF_PSICOLOGO, QT_PROF_ASSIST_SOCIAL) FROM STDIN WITH CSV HEADER DELIMITER ','",
-            open(tabelas_arquivos["funcionarios"], 'r')
-        )
-        print("✅ Tabela 'funcionarios' populada com sucesso.")
-        cur.copy_expert(
-            "COPY rendimento_escolar(NU_ANO_CENSO, CO_ENTIDADE, FUNDAMENTAL, ENSINO_MEDIO) FROM STDIN WITH CSV HEADER DELIMITER ','",
-            open(tabelas_arquivos["rendimento_escolar"], 'r')
-        )
-        print("✅ Tabela 'rendimento_escolar' populada com sucesso.")
-        cur.copy_expert(
-            "COPY rendimento_enem(NU_ANO, CO_ESCOLA_EDUCACENSO, NU_MATRICULAS, NU_PARTICIPANTES, NU_TAXA_PARTICIPACAO, NU_MEDIA_TOT, PORTE_ESCOLA) FROM STDIN WITH CSV HEADER DELIMITER ','",
-            open(tabelas_arquivos["rendimento_enem"], 'r')
-        )
-        print("✅ Tabela 'rendimento_enem' populada com sucesso.")
+        for tabela, arquivo in tabelas_arquivos.items():
+            try:
+                with open(os.path.join(base_path, arquivo), 'r') as f:
+                    cur.copy_expert(copy_statements[tabela], f)
+                    print(f"✅ Tabela '{tabela}' populada com sucesso.")
+            except FileNotFoundError:
+                print(f"❌ ERRO: Arquivo não encontrado para a tabela '{tabela}': {os.path.join(base_path, arquivo)}")
+                # Decide se quer parar ou continuar se um arquivo não for encontrado
+                # raise 
         conn.commit()
         print("✅ Banco de dados populado com sucesso.")
 
+
 def executar_consultas(conn):
-    print("Executando consultas...")
+    print("\nExecutando consultas...")
     consultas = [
         {
             "descricao": "1. Consultar escolas com mais de uma fonte de água",
             "sql": """
                 SELECT *
                 FROM (
-                SELECT 
-                    e.no_entidade,
-                    COUNT(*) FILTER (WHERE a.in_agua_rede_publica) +
-                    COUNT(*) FILTER (WHERE a.in_agua_poco_artesiano) +
-                    COUNT(*) FILTER (WHERE a.in_agua_cacimba) +
-                    COUNT(*) FILTER (WHERE a.in_agua_fonte_rio) AS fontes_agua
-                FROM escolas e
-                JOIN agua a ON e.co_entidade = a.co_entidade
-                WHERE 
-                    a.in_agua_rede_publica OR 
-                    a.in_agua_poco_artesiano OR 
-                    a.in_agua_cacimba OR 
-                    a.in_agua_fonte_rio
-                GROUP BY e.no_entidade
+                    SELECT 
+                        e.no_entidade,
+                        (a.in_agua_rede_publica::int +
+                         a.in_agua_poco_artesiano::int +
+                         a.in_agua_cacimba::int +
+                         a.in_agua_fonte_rio::int) AS fontes_agua
+                    FROM escolas e
+                    JOIN agua a ON e.co_entidade = a.co_entidade
                 ) sub
                 WHERE fontes_agua > 1
                 ORDER BY fontes_agua DESC;
@@ -144,7 +126,7 @@ def executar_consultas(conn):
 
         },
         {
-            "descricao": " 4. Escolas com agua, energia, internet, biblioteca, banheiro e laboratorio de informatica presente ao mesmo tempo",
+            "descricao": "4. Escolas com infraestrutura completa (rede pública)",
             "sql": """
                 SELECT 
                     e.no_entidade,
@@ -157,59 +139,81 @@ def executar_consultas(conn):
                 JOIN internet i ON i.co_entidade = e.co_entidade
                 JOIN infraestrutura inf ON inf.co_entidade = e.co_entidade
                 WHERE 
-                a.in_agua_rede_publica = TRUE AND
-                en.in_energia_rede_publica = TRUE AND
-                es.in_esgoto_rede_publica = TRUE AND
-                i.in_internet = TRUE AND
-                inf.in_biblioteca = TRUE AND
-                inf.in_banheiro = TRUE AND
-                inf.in_laboratorio_informatica = TRUE
+                    a.in_agua_rede_publica = TRUE AND
+                    en.in_energia_rede_publica = TRUE AND
+                    es.in_esgoto_rede_publica = TRUE AND
+                    i.in_internet = TRUE AND
+                    inf.in_biblioteca = TRUE AND
+                    inf.in_banheiro = TRUE AND
+                    inf.in_laboratorio_informatica = TRUE;
             """
         },
         {
-            "descricao": "5. Relação rendimento e dependencia e localização da escola",
+            "descricao": "5. Relação rendimento e dependencia da escola",
             "sql": """
                 SELECT 
                     e.tp_dependencia,
-                COUNT(*) AS qtd_escolas,
-                ROUND(AVG(r.ensino_medio), 2) AS media_ensino_medio,
-                ROUND(AVG(r.fundamental), 2) AS media_ensino_fundamental
+                    COUNT(*) AS qtd_escolas,
+                    ROUND(AVG(r.ensino_medio), 2) AS media_ensino_medio,
+                    ROUND(AVG(r.fundamental), 2) AS media_ensino_fundamental
                 FROM rendimento_escolar r
                 JOIN escolas e ON e.co_entidade = r.co_entidade
                 WHERE 
-                r.ensino_medio IS NOT NULL OR r.fundamental IS NOT NULL
+                    r.ensino_medio IS NOT NULL OR r.fundamental IS NOT NULL
                 GROUP BY e.tp_dependencia
                 ORDER BY media_ensino_medio DESC NULLS LAST;
             """
         }
     ]
 
-    with conn.cursor() as cur, open("resultados_consultas.txt", "w") as f:
+    with conn.cursor() as cur, open("resultados_consultas.txt", "w", encoding="utf-8") as f:
         for c in consultas:
-            f.write(f"\nConsulta: {c['descricao']}\n")
-            print(f"\nConsulta: {c['descricao']}")
-            cur.execute(c['sql'])
-            rows = cur.fetchall()
-            for row in rows:
-                f.write(f"{row}\n")
-                print(row)
-    print("✅ Resultados das consultas salvos em 'resultados_consultas.txt'.")
+            try:
+                f.write(f"\nConsulta: {c['descricao']}\n")
+                f.write("-" * 40 + "\n")
+                print(f"\nExecutando Consulta: {c['descricao']}")
+                cur.execute(c['sql'])
+                
+                # Escrever cabeçalhos das colunas
+                col_names = [desc[0] for desc in cur.description]
+                f.write(f"{col_names}\n")
+                
+                rows = cur.fetchall()
+                if not rows:
+                    print(" -> Nenhum resultado encontrado.")
+                    f.write("Nenhum resultado encontrado.\n")
+                
+                for row in rows:
+                    f.write(f"{row}\n")
+                    print(row)
+            except psycopg2.Error as e:
+                print(f"❌ ERRO ao executar a consulta '{c['descricao']}': {e}")
+                f.write(f"ERRO: {e}\n")
+    print("\n✅ Resultados das consultas salvos em 'resultados_consultas.txt'.")
 
 def main():
-    conn = psycopg2.connect(
-        dbname="projeto_mc536",
-        user="postgres",
-        password="unicamp-2324",
-        host="localhost",
-        port="5432"
-    )
-
     try:
+        conn = psycopg2.connect(
+            dbname="nome_do_banco",
+            user="postgres",
+            password="**********", # Lembre-se de não deixar senhas fixas em código de produção
+            host="localhost",
+            port="5432"
+        )
+
         criar_esquema(conn)
         popular_banco(conn)
         executar_consultas(conn)
+
+    except psycopg2.OperationalError as e:
+        print(f"❌ ERRO DE CONEXÃO: Não foi possível conectar ao banco de dados.")
+        print(f"Detalhes: {e}")
+    except Exception as e:
+        print(f"❌ Ocorreu um erro inesperado: {e}")
     finally:
-        conn.close()
+        if 'conn' in locals() and conn:
+            conn.close()
+            print("\nConexão com o banco de dados fechada.")
 
 if __name__ == '__main__':
     main()
