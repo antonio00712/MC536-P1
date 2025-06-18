@@ -8,6 +8,10 @@ Este projeto se relaciona com a ODS 4 – Educação de qualidade, especialmente
 
 <img src="modelo_conceitual_p1.jpg" alt="Modelo Conceitual">
 
+## Modelo Relacional
+![modelo_relacional](https://github.com/user-attachments/assets/88397f19-2edd-4f95-a8e2-4ffb5fe97f10)
+
+
 ## 💻 Tutorial para uso 
 
 1. Crie uma pasta vazia no diretório /tmp chamada data/;
